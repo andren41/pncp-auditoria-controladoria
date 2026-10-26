@@ -38,12 +38,70 @@ Pipeline analítico End-to-End (Python + MySQL + Power BI) desenvolvido para san
   2. Valor unitário estimado ausente ou <= 0: **23 itens**
   3. Valor total homologado > 1.000x o estimado: **7 itens**
   4. Valor unitário homologado ausente ou <= 0: **6 itens**
-  5. Valor total (estimado ou homologado) > R$ 1 bilião (1e12 / 1 trilhão): **3 itens**
+  5. Valor total (estimado ou homologado) > R$ 1 trilhão (1e12): **3 itens**
   6. Quantidade vazia ou <= 0: **1 item**
 
-## Decisões de modelagem e qualidade dos dados
+---
 
-### Regra de integridade `chk_fato_valores` e itens com valor simbólico
+## 2. Modelagem Dimensional (Star Schema)
+
+![Star Schema do PNCP](docs/img/star_schema.png)
+
+A tabela fato `fato_item_contratado` (6.126 linhas, uma por item contratado) se relaciona com quatro dimensões por chaves substitutas (`sk_*`). Todas as relações são de um para muitos (1 dimensão : N itens).
+
+| Tabela | Tipo | Linhas | Chave natural (única) |
+| :--- | :---: | :---: | :--- |
+| `fato_item_contratado` | Fato | 6.126 | `numero_controle_pncp` + `numero_item` |
+| `dim_orgao` | Dimensão | 363 | `cnpj_orgao` |
+| `dim_fornecedor` | Dimensão | 2.652 | `ni_fornecedor` |
+| `dim_modalidade` | Dimensão | 7 | `modalidade_id` |
+| `dim_localidade` | Dimensão | 27 | `uf_sigla` |
+
+O script de criação do banco é o `sql/01_criar_banco.sql`. Ele remove as tabelas existentes (fato primeiro, depois as dimensões) antes de recriá-las, o que permite repetir a carga sem limpeza manual.
+
+---
+
+## 3. Carga no MySQL
+
+### 3.1. Pré-requisitos
+* Servidor MySQL em execução.
+* Arquivo `.env` com as credenciais de conexão (senha correta).
+* Dependências Python instaladas, incluindo o conector do MySQL:
+
+```powershell
+python -m pip install mysql-connector-python
+```
+
+### 3.2. Execução
+
+```powershell
+python -m src.carregar
+```
+
+O script cria o banco e as tabelas, carrega as 4 dimensões, carrega a fato (as dimensões vêm primeiro por causa das chaves estrangeiras) e confere as contagens.
+
+### 3.3. Conferência esperada
+
+```text
+Carga:
+   dim_orgao: 363 linhas
+   dim_fornecedor: 2652 linhas
+   dim_modalidade: 7 linhas
+   dim_localidade: 27 linhas
+   fato_item_contratado: 6126 linhas
+Conferencia:
+   fato_item_contratado: 6126 (esperado 6126) -> OK
+   dim_orgao: 363 (esperado 363) -> OK
+   dim_fornecedor: 2652 (esperado 2652) -> OK
+   dim_modalidade: 7 (esperado 7) -> OK
+   dim_localidade: 27 (esperado 27) -> OK
+```
+
+---
+
+## 4. Decisões de Modelagem e Qualidade dos Dados
+
+### 4.1. Regra de integridade `chk_fato_valores` e itens com valor simbólico
 
 A tabela `fato_item_contratado` possui uma restrição `CHECK` (`chk_fato_valores`)
 que garante valores monetários consistentes antes de qualquer análise:
@@ -56,7 +114,7 @@ que garante valores monetários consistentes antes de qualquer análise:
 Na primeira tentativa de carga, o MySQL rejeitou o lote com o erro 3819
 (`Check constraint 'chk_fato_valores' is violated`). Um diagnóstico sobre o CSV
 (`src/diagnostico.py`) mostrou que apenas **3 dos 6.126 itens** violavam a regra,
-todos pela mesma condição (`valor_total_homologado > 0`):
+todos pela mesma condição (`valor_total_homologado > 0`, na versão original da regra):
 
 | numero_controle_pncp | Valor total estimado | Valor unit. homologado | Valor total homologado |
 |---|---|---|---|
