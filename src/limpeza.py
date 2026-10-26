@@ -41,10 +41,10 @@ def consertar_acento(texto):
 
 
 def tirar_espacos(texto):
-    """Tira espacos das pontas e espacos repetidos.   '  Ana   Maria ' -> 'Ana Maria'  (  e o espaco 'sem quebra')."""
+    """Tira espacos das pontas e espacos repetidos.   '  Ana   Maria ' -> 'Ana Maria'  (  e o espaco 'sem quebra')."""
     # DICA: texto.split() separa o texto em palavras, em QUALQUER espaco (inclusive o 'sem quebra')
     # COMPLETE: junte as palavras de volta com UM unico espaco entre elas (" ".join(...))
-    return ____
+    return " ".join(texto.split())
 
 
 def eh_nulo(texto, zero_eh_nulo=True):
@@ -55,9 +55,9 @@ def eh_nulo(texto, zero_eh_nulo=True):
         return True
     if chave == "0":
         # COMPLETE: devolva o que diz se o zero conta como nulo neste campo (o parametro da funcao)
-        return ____
+        return zero_eh_nulo
     # COMPLETE: o texto e nulo se a chave estiver no conjunto NULOS
-    return ____
+    return chave in NULOS
 
 
 def limpar_texto(texto, zero_eh_nulo=True):
@@ -67,9 +67,9 @@ def limpar_texto(texto, zero_eh_nulo=True):
     texto = remover_invisiveis(texto)
     texto = consertar_acento(texto.strip(" "))
     # COMPLETE: chame tirar_espacos(texto)
-    texto = ____
+    texto = tirar_espacos(texto)
     # COMPLETE: se o texto for nulo (use eh_nulo, passando o zero_eh_nulo), devolva None
-    if ____:
+    if eh_nulo(texto, zero_eh_nulo):
         return None
     return texto
 
@@ -81,9 +81,9 @@ def padronizar_nome(texto):
     if texto is None:
         return None
     # COMPLETE: coloque em maiusculas (metodo .upper())
-    texto = texto.____
+    texto = texto.upper()
     # COMPLETE: troque cada "-" por " - " (o tirar_espacos abaixo arruma os espacos repetidos)
-    texto = ____
+    texto = texto.replace("-", " - ")
     return tirar_espacos(texto)
 
 
@@ -101,7 +101,7 @@ def limpar_documento(texto, tipo_pessoa=None):
     if tipo_pessoa == "PE":
         return texto.upper()
     # COMPLETE: fique so com os caracteres que sao digitos:  "".join(c for c in texto if c.isdigit())
-    digitos = ____
+    digitos = "".join(c for c in texto if c.isdigit())
     if digitos == "":
         return None
     if tipo_pessoa == "PJ":
@@ -113,7 +113,7 @@ def limpar_documento(texto, tipo_pessoa=None):
     if len(digitos) > tamanho:               # digitos demais: documento impossivel
         return None
     # COMPLETE: complete com zeros a esquerda ate o tamanho certo (metodo .zfill(tamanho))
-    return digitos.____
+    return digitos.zfill(tamanho)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -129,32 +129,32 @@ def converter_numero(texto):
         return None
     texto = texto.replace("R$", "").replace(" ", "")
     # COMPLETE: e negativo se comecar com "(" ou com "-", ou se terminar com "-":  (1.500,00)  -12,50  1.500,00-
-    negativo = ____
+    negativo = texto.startswith("(") or texto.startswith("-") or texto.endswith("-")
     texto = texto.strip("()-")
     if "." in texto and "," in texto:
         if texto.rfind(",") > texto.rfind("."):
             # formato 1.234,56 (a virgula vem por ultimo). COMPLETE: tire os pontos e troque a virgula por ponto
-            texto = ____
+            texto = texto.replace(".", "").replace(",", ".")
         else:
             # formato 1,234.56 (o ponto vem por ultimo). COMPLETE: tire as virgulas
-            texto = ____
+            texto = texto.replace(",", "")
     elif "," in texto:
         if texto.count(",") > 1:
             # 1,234,567 (virgula repetida = milhar). COMPLETE: tire as virgulas
-            texto = ____
+            texto = texto.replace(",", "")
         else:
             # 12,5 (virgula sozinha = decimal). COMPLETE: troque a virgula por ponto
-            texto = ____
+            texto = texto.replace(",", ".")
     elif texto.count(".") > 1:
         # 1.234.567 (ponto repetido = milhar). COMPLETE: tire os pontos
-        texto = ____
+        texto = texto.replace(".", "")
     # (ponto sozinho, como em 1234.56 ou 746.815, ja e decimal: nao precisa mexer)
     try:
         numero = float(texto)
     except ValueError:
         return None
     # COMPLETE: se for negativo, devolva o numero com sinal de menos; senao, o proprio numero
-    return ____
+    return -numero if negativo else numero
 
 
 # ---------------------------------------------------------------------------------------------
@@ -167,15 +167,15 @@ def converter_data(texto):
     if texto is None:
         return None
     # COMPLETE: fique so com os 10 primeiros caracteres (o texto[:10] descarta a hora)
-    texto = texto[:____]
+    texto = texto[:10]
     for formato in FORMATOS_DATA:
         try:
             # COMPLETE: strptime le o texto no formato; .date() tira a hora. Use datetime.strptime(texto, formato).date()
-            data = ____
+            data = datetime.strptime(texto, formato).date()
         except ValueError:
             continue                          # nao era esse formato: tente o proximo
         # COMPLETE: so vale se o ano estiver entre 2000 e 2030 (use data.year)
-        if ____:
+        if 2000 <= data.year <= 2030:
             return data
         return None
     return None
@@ -188,13 +188,13 @@ from datetime import date  # noqa: E402
 
 CASOS = [
     # (funcao, argumentos, resultado esperado)   -> os mesmos exemplos do casos_de_teste.docx
-    ("tirar_espacos", ("  Ana   Maria ",), "Ana Maria"),
+    ("tirar_espacos", ("  Ana\xa0  Maria ",), "Ana Maria"),
     ("eh_nulo", ("N/A",), True), ("eh_nulo", ("SEM INFORMAÇÃO",), True), ("eh_nulo", ("",), True),
     ("eh_nulo", ("Ana",), False), ("eh_nulo", ("0", True), True), ("eh_nulo", ("0", False), False),
     ("limpar_texto", ("AquisiÃ§Ã£o de mÃ³veis",), "Aquisição de móveis"),
     ("limpar_texto", ("Aquisição",), "Aquisição"),
     ("limpar_texto", ("  Ministério  da   Saúde  ",), "Ministério da Saúde"),
-    ("limpar_texto", ("n/a",), None), ("limpar_texto", (" ",), None), ("limpar_texto", ("0",), None),
+    ("limpar_texto", ("n/a",), None), ("limpar_texto", ("\xa0",), None), ("limpar_texto", ("0",), None),
     ("padronizar_nome", ("  Ministério  da   Saúde  ",), "MINISTÉRIO DA SAÚDE"),
     ("padronizar_nome", ("Pregão-Eletrônico",), "PREGÃO - ELETRÔNICO"),
     ("limpar_documento", ("11.222.333/0001-81", "PJ"), "11222333000181"),
@@ -203,7 +203,7 @@ CASOS = [
     ("limpar_documento", ("360305000104", "PJ"), "00360305000104"),
     ("limpar_documento", ("111.444.777-35", "PF"), "11144477735"),
     ("limpar_documento", ("1234567890", "PF"), "01234567890"),
-    ("limpar_documento", (" 11222333000181 ", "PJ"), "11222333000181"),
+    ("limpar_documento", ("\xa011222333000181 ", "PJ"), "11222333000181"),
     ("limpar_documento", ("N/A", "PJ"), None), ("limpar_documento", ("-", "PJ"), None),
     ("limpar_documento", ("ABC123", "PE"), "ABC123"),
     ("limpar_documento", ("123456789012345", "PJ"), None),
@@ -213,7 +213,7 @@ CASOS = [
     ("converter_numero", ("1.234.567",), 1234567.0), ("converter_numero", ("12,5",), 12.5),
     ("converter_numero", ("1.234.567,89",), 1234567.89), ("converter_numero", ("R$ -12,50",), -12.5),
     ("converter_numero", ("(1.500,00)",), -1500.0), ("converter_numero", ("1.500,00-",), -1500.0),
-    ("converter_numero", ("R$ 2.000,00",), 2000.0), ("converter_numero", ("493231.6000",), 493231.6),
+    ("converter_numero", ("R$\xa02.000,00",), 2000.0), ("converter_numero", ("493231.6000",), 493231.6),
     ("converter_numero", ("0",), 0.0), ("converter_numero", ("N/A",), None), ("converter_numero", ("",), None),
     ("converter_data", ("2025-03-10T08:30:00",), date(2025, 3, 10)), ("converter_data", ("10/03/2025",), date(2025, 3, 10)),
     ("converter_data", ("10-03-2025",), date(2025, 3, 10)), ("converter_data", ("2025/03/10",), date(2025, 3, 10)),
