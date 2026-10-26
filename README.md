@@ -40,3 +40,44 @@ Pipeline analítico End-to-End (Python + MySQL + Power BI) desenvolvido para san
   4. Valor unitário homologado ausente ou <= 0: **6 itens**
   5. Valor total (estimado ou homologado) > R$ 1 bilião (1e12 / 1 trilhão): **3 itens**
   6. Quantidade vazia ou <= 0: **1 item**
+
+## Decisões de modelagem e qualidade dos dados
+
+### Regra de integridade `chk_fato_valores` e itens com valor simbólico
+
+A tabela `fato_item_contratado` possui uma restrição `CHECK` (`chk_fato_valores`)
+que garante valores monetários consistentes antes de qualquer análise:
+
+- `valor_unitario_estimado > 0`
+- `valor_total_estimado >= 1`
+- `valor_unitario_homologado > 0`
+- `valor_total_homologado >= 0`
+
+Na primeira tentativa de carga, o MySQL rejeitou o lote com o erro 3819
+(`Check constraint 'chk_fato_valores' is violated`). Um diagnóstico sobre o CSV
+(`src/diagnostico.py`) mostrou que apenas **3 dos 6.126 itens** violavam a regra,
+todos pela mesma condição (`valor_total_homologado > 0`):
+
+| numero_controle_pncp | Valor total estimado | Valor unit. homologado | Valor total homologado |
+|---|---|---|---|
+| 00394452000103-1-009745/2025 | R$ 10.000,00 | R$ 0,0001 | R$ 0,00 |
+| 00394502000144-1-004219/2025 | R$ 745.000,00 | R$ 0,0001 | R$ 0,00 |
+| 00394452000103-1-019179/2025 | R$ 100,00 | R$ 0,0001 | R$ 0,00 |
+
+**Causa:** são itens homologados com valor unitário simbólico de R$ 0,0001. Como o
+valor total é armazenado como `DECIMAL(18,2)`, o produto (0,0001 × 1) é arredondado
+para 0,00 e a regra `> 0` o rejeitava.
+
+**Decisão:** a restrição foi relaxada de `valor_total_homologado > 0` para
+`valor_total_homologado >= 0`. Os itens foram mantidos porque fazem parte do
+conjunto de referência (6.126 itens) e descartá-los alteraria o universo analisado.
+A regra continua barrando valores negativos, e `valor_unitario_homologado > 0`
+segue valendo.
+
+**Ressalva para as análises:** nesses 3 itens a economia aparente
+(`valor_total_estimado - valor_total_homologado`) é praticamente igual ao valor
+estimado inteiro, o que pode inflar indicadores de economia. As consultas que
+calculam economia devem tratá-los à parte (por exemplo, filtrando
+`valor_total_homologado > 0`) ou mencioná-los como ressalva. Os registros também
+são candidatos a verificação manual, pois podem indicar valor simbólico legítimo
+ou erro de preenchimento no PNCP.
