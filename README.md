@@ -3,7 +3,7 @@
 Pipeline analítico **End-to-End** (**Python + MySQL + Power BI**) desenvolvido para saneamento, modelagem dimensional (*Star Schema*) e auditoria das contratações públicas federais extraídas do Portal Nacional de Contratações Públicas (PNCP) referentes ao ano de 2025.
 
 > 🎥 **Apresentação Executiva e Defesa Técnica (Review de Sprint em Vídeo):**
-> **[INSERIR_LINK_DO_GOOGLE_DRIVE_AQUI]**
+> **https://drive.google.com/file/d/1OR0VDbuqR2OQX17MOS0KGx8ZfOiWgWty/view?usp=sharing**
 
 ---
 
